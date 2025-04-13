@@ -1,7 +1,7 @@
 import httpx
-import urllib.parse
-from typing import List
+from typing import Dict, List
 from pydantic import BaseModel, Field
+from urllib.parse import quote
 
 from nekro_agent.services.plugin.base import NekroPlugin, ConfigBase, SandboxMethodType
 from nekro_agent.api.schemas import AgentCtx
@@ -25,140 +25,93 @@ class EmojiSearchConfig(ConfigBase):
         title="API地址",
         description="表情包搜索API的基础URL，<a href='https://www.apihz.cn/api/apihzbqbbaidu.html' target='_blank'>接口文档</a>",
     )
-    TIMEOUT: int = Field(
-        default=10,
-        title="请求超时时间",
-        description="API请求的超时时间(秒)",
-    )
     USER_ID: str = Field(
         default="88888888",
         title="用户ID",
-        description="访问API所需的用户ID",
-        env="EMOJI_SEARCH_USER_ID"
+        description="用户中心的数字ID，必需配置",
     )
     USER_KEY: str = Field(
-        default="88888888",
-        title="用户秘钥",
-        description="访问API所需的用户秘钥",
-        env="EMOJI_SEARCH_USER_KEY"
+        default="",
+        title="88888888",
+        description="用户中心通讯秘钥，必需配置",
+    )
+    TIMEOUT: int = Field(
+        default=15,
+        title="请求超时时间",
+        description="API请求的超时时间(秒)",
     )
     EXTRA_KEYWORD: str = Field(
         default="",
-        title="附加关键词",
-        description="搜索时会自动附加的关键词，如'二次元'",
+        title="额外关键词",
+        description="在搜索时会自动附加的关键词，可为空",
     )
 
 # 获取配置
 config = plugin.get_config(EmojiSearchConfig)
-
-class SearchResult(BaseModel):
-    """表情包搜索结果模型"""
-    image_urls: List[str]
-    current_page: int
-    max_page: int
-    total_count: int
-
-async def _search_emoji(
-    keywords: str,
-    page: int = 1,
-    limit: int = 1
-) -> SearchResult:
-    """执行表情包搜索
-    
-    Args:
-        keywords: 搜索关键词
-        page: 页码(默认为1)
-        limit: 每页结果数量(默认为1)
-    
-    Returns:
-        SearchResult: 搜索结果对象
-        
-    Raises:
-        httpx.RequestError: 网络请求错误
-        httpx.HTTPStatusError: HTTP状态错误
-        ValueError: 数据解析错误
-    """
-    # 如果配置中有附加关键词，合并到搜索词中
-    search_words = keywords
-    if config.EXTRA_KEYWORD:
-        search_words = f"{keywords} {config.EXTRA_KEYWORD}"
-    
-    params = {
-        "id": config.USER_ID,
-        "key": config.USER_KEY,
-        "words": urllib.parse.quote(search_words),
-        "page": page,
-        "limit": limit
-    }
-    
-    async with httpx.AsyncClient(timeout=config.TIMEOUT) as client:
-        response = await client.get(config.API_URL, params=params)
-        response.raise_for_status()
-        data = response.json()
-        
-        if data.get("code") != 200:
-            raise ValueError(f"API返回错误: {data.get('msg', '未知错误')}")
-        
-        return SearchResult(
-            image_urls=data.get("res", []),
-            current_page=int(data.get("page", 1)),
-            max_page=int(data.get("maxpage", 1)),
-            total_count=int(data.get("count", 0))
-        )
+if not config.USER_ID or not config.USER_KEY:
+    logger.error("表情包搜索插件配置错误: 必须配置USER_ID和USER_KEY")
 
 @plugin.mount_sandbox_method(
     SandboxMethodType.MULTIMODAL_AGENT,
     name="搜索表情包",
-    description="根据关键词搜索表情包图片并返回",
+    description="根据关键词搜索表情包图片，返回一个合适的表情包图片地址",
 )
-async def search_emoji(
-    _ctx: AgentCtx, 
-    keywords: str, 
-    page: int = 1,
-    limit: int = 1
-) -> str:
+async def search_emoji(_ctx: AgentCtx, keyword: str) -> str:
     """根据关键词搜索表情包图片
     
+    会根据配置中的额外关键词自动附加到搜索词中，随机返回一个搜索结果中的图片URL。
+
     Args:
-        keywords: 搜索关键词，如"开心"、"难过"
-        page: 页码(默认为1)
-        limit: 每页结果数量(默认为1)
-    
+        keyword: 表情包关键词，如"开心"、"生气"等
+
     Returns:
-        str: 搜索结果描述，包含图片URL
+        str: 表情包图片URL
+        
+    Raises:
+        ValueError: 当keyword参数为空或过长时抛出
         
     Example:
-        search_emoji("开心", limit=3)
+        search_emoji("开心")
     """
-    try:
-        # 验证参数
-        if not keywords:
-            return "请提供搜索关键词"
-        
-        if len(keywords) > 100:
-            return "关键词长度不能超过100个字符"
-        
-        limit = min(100, max(1, limit))
-        
-        # 执行搜索
-        result = await _search_emoji(keywords, page, limit)
-        
-        if not result.image_urls:
-            return f"没有找到与'{keywords}'相关的表情包"
-        
-        # 构造返回结果
-        response = [
-            f"找到{result.total_count}个表情包(第{result.current_page}页，共{result.max_page}页):"
-        ]
-        
-        for idx, url in enumerate(result.image_urls, 1):
-            if limit > 1:
-                response.append(f"{idx}. {url}")
-            else:
-                response.append(url)
-                
-        return "\n".join(response)
+    if not keyword:
+        raise ValueError("关键词不能为空")
+    if len(keyword) > 100:
+        raise ValueError("关键词长度不能超过100个汉字")
     
+    try:
+        # 处理搜索关键词
+        search_words = keyword.strip()
+        if config.EXTRA_KEYWORD:
+            search_words = f"{search_words} {config.EXTRA_KEYWORD}"
+        
+        # 准备POST请求参数
+        params = {
+            "id": config.USER_ID,
+            "key": config.USER_KEY,
+            "words": search_words,
+            "page": 1,
+            "limit": 10,  # 获取10个结果随机选择
+        }
+        
+        async with httpx.AsyncClient(timeout=config.TIMEOUT) as client:
+            # 使用POST方式请求
+            response = await client.post(
+                config.API_URL,
+                data=params
+            )
+            
+            data = response.json()
+            
+            if data["code"] != 200:
+                logger.error(f"表情包搜索失败: {data.get('msg', '未知错误')}")
+                return f"表情包搜索失败: {data.get('msg', '未知错误')}"
+                
+            if not data.get("res"):
+                return "未找到匹配的表情包"
+            
+            # 从结果中随机选择一个表情包(这里取第一个以确保可预测性)
+            return data["res"][0]
+            
     except httpx.RequestError as e:
         logger.error(f"表情包搜索请求失败: {e}")
         return f"表情包搜索失败，无法连接到服务: {str(e)}"
@@ -166,8 +119,8 @@ async def search_emoji(
         logger.error(f"表情包搜索HTTP错误: {e}")
         return f"表情包搜索失败，服务返回错误: {e.response.status_code}"
     except ValueError as e:
-        logger.error(f"表情包数据解析错误: {e}")
-        return f"表情包搜索失败: {str(e)}"
+        logger.error(f"表情包搜索参数错误: {e}")
+        return f"表情包搜索参数错误: {str(e)}"
     except Exception as e:
         logger.error(f"表情包搜索未知错误: {e}")
         return f"表情包搜索发生未知错误: {str(e)}"
