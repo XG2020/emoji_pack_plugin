@@ -23,7 +23,7 @@ plugin = NekroPlugin(
 @plugin.mount_config()
 class EmojiPackConfig(ConfigBase):
     """表情包插件配置"""
-    API_URL: HttpUrl = Field(
+    API_URL: str = Field(
         default="https://cn.apihz.cn/api/img/apihzbqbbaidu.php",
         title="API地址",
         description="表情包API的基础URL，<a href='https://www.apihz.cn/api/apihzbqbbaidu.html' target='_blank'>接口文档</a>",
