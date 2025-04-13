@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "acg_image_search"
+name = "emoji_pack_plugin"
 version = "1.0.0"
 description = "表情包获取插件"
 authors = ["XG.GM <tencenot@vip.qq.com>"]
