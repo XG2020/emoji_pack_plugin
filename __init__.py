@@ -12,7 +12,7 @@ from nekro_agent.core import logger
 # 插件实例
 plugin = NekroPlugin(
     name="表情包获取插件",
-    module_name="emoji_pack",
+    module_name="emoji_pack_plugin",
     description="根据关键词获取相关的表情包图片",
     version="1.0.0",
     author="XGGM",
