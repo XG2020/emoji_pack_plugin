@@ -16,7 +16,7 @@ plugin = NekroPlugin(
     description="根据关键词获取相关的表情包图片",
     version="1.0.0",
     author="XGGM",
-    url="https://github.com/XG2020/emoji-pack-plugin",
+    url="https://github.com/XG2020/emoji_pack_plugin",
 )
 
 
