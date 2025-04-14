@@ -1,11 +1,11 @@
 [tool.poetry]
-name = "emoji_pack_plugin"
+name = "emo_plugin"
 version = "1.0.0"
 description = "表情包获取插件"
 authors = ["XG.GM <tencenot@vip.qq.com>"]
 readme = "README.md"
 packages = []
-repository = "https://github.com/XG2020/emoji_pack_plugin"
+repository = "https://github.com/XG2020/emo_plugin"
 
 
 [tool.poetry.dependencies]
