@@ -24,17 +24,17 @@ class EmojiSearchConfig(ConfigBase):
     API_URL: str = Field(
         default="https://cn.apihz.cn/api/img/apihzbqbbaidu.php",
         title="表情包API地址",
-        description="表情包搜索API的基础URL",
+        description="表情包搜索API, <a href='https://www.apihz.cn/api/apihzbqbbaidu.html' target='_blank'>接口文档</a>",
     )
     USER_ID: str = Field(
         default="88888888",
         title="用户ID",
-        description="API访问所需的用户数字ID",
+        description="API访问所需的用户数字ID，默认为公共ID，共享每分钟调用频次",
     )
     USER_KEY: str = Field(
         default="88888888",
         title="用户KEY",
-        description="API访问所需的通讯秘钥",
+        description="API访问所需的通讯秘钥，默认为公共KEY，共享每分钟调用频次",
     )
     EXTRA_KEYWORD: str = Field(
         default="",
