@@ -11,11 +11,11 @@ from nekro_agent.core import logger
 # 插件实例
 plugin = NekroPlugin(
     name="表情包搜索插件",
-    module_name="emoji_pack_plugin",
+    module_name="emo_plugin",
     description="根据关键词搜索表情包图片",
     version="1.0.0",
     author="XGGM",
-    url="https://github.com/XG2020/emoji_pack_plugin",
+    url="https://github.com/XG2020/emo_plugin",
 )
 
 @plugin.mount_config()
